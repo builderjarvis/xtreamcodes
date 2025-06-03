@@ -1,0 +1,37 @@
+{
+  "info": {
+    "actors": "Actor 1, Actress 1",
+    "age": "",
+    "audio": {},
+    "backdrop_path": ["http://127.0.0.1/logos/vod_stream_1.png"],
+    "bitrate": 4096,
+    "cast": "Actor 1, Actress 1",
+    "country": "",
+    "cover_big": "http://127.0.0.1/logos/vod_stream_1.png",
+    "description": "Aliqua irure anim veniam officia minim deserunt dolor officia tempor deserunt. Anim magna aliquip sit enim voluptate Lorem duis cillum laboris commodo labore proident. Minim incididunt commodo laboris amet veniam quis. Labore sint velit nostrud nostrud Lorem labore amet nulla nostrud laborum tempor exercitation. Consectetur laborum Lorem officia ex consequat officia enim irure consectetur. Ea excepteur culpa ad ullamco anim magna eu nostrud fugiat id cupidatat.",
+    "director": "Director 1",
+    "duration": "02:30:00",
+    "duration_secs": "9000",
+    "genre": "Action",
+    "movie_image": "http://127.0.0.1/logos/vod_stream_1.png",
+    "name": "Movie 1",
+    "o_name": "Movie 1",
+    "plot": "Consequat reprehenderit quis tempor tempor dolore consequat consequat occaecat pariatur ad minim elit. Pariatur proident in fugiat deserunt fugiat tempor. Dolore mollit fugiat exercitation in. Voluptate irure amet enim sit voluptate do Lorem adipisicing consectetur cupidatat. Et ullamco ea occaecat incididunt non ut anim aliqua mollit pariatur Lorem dolore id.",
+    "rating": "8.5",
+    "releasedate": "2025-01-01",
+    "runtime": "150",
+    "status": "Released",
+    "tmdb_id": "1",
+    "video": {}
+  },
+  "movie_data": {
+    "added": "1735689600",
+    "category_id": "1",
+    "category_ids": [1],
+    "container_extension": "mkv",
+    "custom_sid": null,
+    "direct_source": "",
+    "name": "Movie 1",
+    "stream_id": 1000
+  }
+}

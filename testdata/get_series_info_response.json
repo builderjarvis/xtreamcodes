@@ -1,0 +1,49 @@
+{
+  "episodes": {
+    "1": [
+      {
+        "added": "1735689600",
+        "container_extension": "mp4",
+        "custom_sid": null,
+        "direct_source": "",
+        "episode_num": 1,
+        "id": "1",
+        "info": {},
+        "season": 1,
+        "title": "Episode 1"
+      }
+    ]
+  },
+  "info": {
+    "backdrop_path": ["http://127.0.0.1/logos/series_stream_1.png"],
+    "cast": "Actor 1, Actress 1, Actor 2",
+    "category_id": "1",
+    "category_ids": [1],
+    "cover": "http://127.0.0.1/logos/series_stream_1.png",
+    "director": "Director 1, Director 2",
+    "episode_run_time": "45",
+    "genre": "Drama",
+    "last_modified": "1735689600",
+    "name": "Series 1",
+    "plot": "Sunt commodo eu duis in veniam mollit deserunt ad aute. Sit ad duis id labore enim id minim. Deserunt sint laboris tempor esse nulla incididunt aliqua ipsum laboris est enim voluptate proident tempor ex. Adipisicing labore dolor velit adipisicing mollit aliqua amet velit sit. Id nulla id sunt ex labore.",
+    "rating": "9",
+    "rating_5based": "4.5",
+    "releaseDate": "2025-01-01",
+    "tmdb": "1",
+    "youtube_trailer": "Z6WqiUh5QFwd"
+  },
+  "seasons": [
+    {
+      "air_date": "2025-01-01",
+      "cover": "http://127.0.0.1/logos/series_1.png",
+      "cover_big": "http://127.0.0.1/logos/series_1.png",
+      "cover_tmdb": "http://127.0.0.1/logos/series_1.png",
+      "duration": "45",
+      "episode_count": "1",
+      "name": "Series 1",
+      "overview": "http://127.0.0.1/logos/series_1.png",
+      "releaseDate": "2025-01-01",
+      "season_number": 1
+    }
+  ]
+}

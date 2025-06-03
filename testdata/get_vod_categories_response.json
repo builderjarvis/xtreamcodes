@@ -1,0 +1,17 @@
+[
+  {
+    "category_id": 1,
+    "category_name": "VOD Category 1",
+    "parent_id": 0
+  },
+  {
+    "category_id": 2,
+    "category_name": "VOD Category 2",
+    "parent_id": 0
+  },
+  {
+    "category_id": 3,
+    "category_name": "VOD Category 3",
+    "parent_id": 0
+  }
+]

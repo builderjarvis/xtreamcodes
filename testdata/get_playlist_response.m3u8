@@ -1,0 +1,5 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="channel-1" tvg-name="Channel 1" tvg-logo="http://127.0.0.1/logos/live_stream_1.png" group-title="Group 1",Channel 1
+http://127.0.0.1/user/pass/1
+#EXTINF:-1 tvg-id="channel-2" tvg-name="Channel 2" tvg-logo="http://127.0.0.1/logos/live_stream_2.png" group-title="Group 2",Channel 2
+http://127.0.0.1/user/pass/2

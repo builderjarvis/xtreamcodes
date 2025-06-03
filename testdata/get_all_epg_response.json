@@ -1,0 +1,56 @@
+{
+  "epg_listings": [
+    {
+      "id": "1",
+      "epg_id": "1",
+      "title": "VGl0bGUgMQ==",
+      "lang": "",
+      "start": "2025-01-01 00:00:00",
+      "end": "2025-01-01 01:00:00",
+      "description": "RGVzY3JpcHRpb24gMQ==",
+      "channel_id": "LiveStream1",
+      "start_timestamp": "1735689600",
+      "stop_timestamp": "1735693200",
+      "stream_id": "100"
+    },
+    {
+      "id": "2",
+      "epg_id": "1",
+      "title": "VGl0bGUgMg==",
+      "lang": "",
+      "start": "2025-01-01 01:00:00",
+      "end": "2025-01-01 02:00:00",
+      "description": "RGVzY3JpcHRpb24gMg==",
+      "channel_id": "LiveStream1",
+      "start_timestamp": "1735693200",
+      "stop_timestamp": "1735696800",
+      "stream_id": "100"
+    },
+    {
+      "id": "3",
+      "epg_id": "1",
+      "title": "VGl0bGUgMw==",
+      "lang": "",
+      "start": "2025-01-01 02:00:00",
+      "end": "2025-01-01 03:00:00",
+      "description": "RGVzY3JpcHRpb24gMw==",
+      "channel_id": "LiveStream1",
+      "start_timestamp": "1735696800",
+      "stop_timestamp": "1735700400",
+      "stream_id": "100"
+    },
+    {
+      "id": "4",
+      "epg_id": "1",
+      "title": "VGl0bGUgNA==",
+      "lang": "",
+      "start": "2025-01-01 03:00:00",
+      "end": "2025-01-01 04:00:00",
+      "description": "RGVzY3JpcHRpb24gNA==",
+      "channel_id": "LiveStream1",
+      "start_timestamp": "1735700400",
+      "stop_timestamp": "1735704000",
+      "stream_id": "100"
+    }
+  ]
+}
