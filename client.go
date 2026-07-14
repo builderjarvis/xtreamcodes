@@ -36,6 +36,23 @@ const (
 	vodStreamsAction       = "get_vod_streams"
 )
 
+// PlaylistType represents the type of playlist requested from the Xtream Codes API.
+type PlaylistType string
+
+const (
+	PlaylistTypeM3U     PlaylistType = "m3u"
+	PlaylistTypeM3UPlus PlaylistType = "m3u_plus"
+)
+
+// OutputFormat represents the container/output format requested for a playlist.
+type OutputFormat string
+
+const (
+	OutputFormatTS   OutputFormat = "ts"
+	OutputFormatM3U8 OutputFormat = "m3u8"
+	OutputFormatMP4  OutputFormat = "mp4"
+)
+
 // Client represents a client for the Xtream Codes API.
 type Client struct {
 	host       string
@@ -90,9 +107,9 @@ func WithUserAgent(userAgent string) Option {
 func listStreams[E LiveStream | SeriesStream | VODStream](
 	ctx context.Context,
 	client *Client,
-	url string,
+	reqURL string,
 ) ([]E, error) {
-	resp, err := client.doRequest(ctx, url)
+	resp, err := client.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -101,12 +118,32 @@ func listStreams[E LiveStream | SeriesStream | VODStream](
 	var streams []E
 	if err := json.NewDecoder(resp.Body).Decode(&streams); err != nil {
 		return nil, &DecoderError{
-			URL:                    url,
+			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
 
 	return streams, nil
+}
+
+// redactURL masks the username and password query parameters in a URL so that
+// credentials are never stored in errors or leaked into logs.
+func redactURL(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+
+	query := parsed.Query()
+	if query.Has("username") {
+		query.Set("username", "REDACTED")
+	}
+	if query.Has("password") {
+		query.Set("password", "REDACTED")
+	}
+	parsed.RawQuery = query.Encode()
+
+	return parsed.String()
 }
 
 // buildURL constructs the full URL for the API request, including the host, path, and query parameters.
@@ -115,17 +152,17 @@ func (c *Client) buildURL(path string, queryParameters url.Values) string {
 	credentialsQueryParameters.Add("username", c.username)
 	credentialsQueryParameters.Add("password", c.password)
 
-	url := fmt.Sprintf("%s%s?%s", c.host, path, credentialsQueryParameters.Encode())
+	reqURL := fmt.Sprintf("%s%s?%s", c.host, path, credentialsQueryParameters.Encode())
 	if queryParameters != nil {
-		url = fmt.Sprintf("%s&%s", url, queryParameters.Encode())
+		reqURL = fmt.Sprintf("%s&%s", reqURL, queryParameters.Encode())
 	}
 
-	return url
+	return reqURL
 }
 
 // doRequest executes an HTTP GET request to the specified URL and returns the response.
-func (c *Client) doRequest(ctx context.Context, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (c *Client) doRequest(ctx context.Context, reqURL string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -148,7 +185,7 @@ func (c *Client) doRequest(ctx context.Context, url string) (*http.Response, err
 		}
 
 		return nil, &HTTPError{
-			URL:        url,
+			URL:        redactURL(reqURL),
 			StatusCode: resp.StatusCode,
 			Body:       body,
 		}
@@ -161,9 +198,9 @@ func (c *Client) doRequest(ctx context.Context, url string) (*http.Response, err
 // It is a helper function used by GetAllEPG, GetShortEPG, and GetShortEPGWithLimits methods
 // to avoid code duplication.
 func (c *Client) getEPG(ctx context.Context, queryParameters url.Values) (*EPG, error) {
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	resp, err := c.doRequest(ctx, url)
+	resp, err := c.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +209,7 @@ func (c *Client) getEPG(ctx context.Context, queryParameters url.Values) (*EPG, 
 	var epg EPG
 	if err := json.NewDecoder(resp.Body).Decode(&epg); err != nil {
 		return nil, &DecoderError{
-			URL:                    url,
+			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
@@ -183,8 +220,8 @@ func (c *Client) getEPG(ctx context.Context, queryParameters url.Values) (*EPG, 
 // listCategories retrieves a list of categories from the specified URL.
 // It is a helper function used by ListLiveCategories, ListSeriesCategories, and ListVODCategories
 // methods to avoid code duplication.
-func (c *Client) listCategories(ctx context.Context, url string) ([]Category, error) {
-	resp, err := c.doRequest(ctx, url)
+func (c *Client) listCategories(ctx context.Context, reqURL string) ([]Category, error) {
+	resp, err := c.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +230,7 @@ func (c *Client) listCategories(ctx context.Context, url string) ([]Category, er
 	var categories []Category
 	if err := json.NewDecoder(resp.Body).Decode(&categories); err != nil {
 		return nil, &DecoderError{
-			URL:                    url,
+			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
@@ -202,19 +239,19 @@ func (c *Client) listCategories(ctx context.Context, url string) ([]Category, er
 }
 
 // GetAllEPG retrieves all EPG data for a specific stream ID.
-func (c *Client) GetAllEPG(ctx context.Context, streamID string) (*EPG, error) {
+func (c *Client) GetAllEPG(ctx context.Context, streamID int) (*EPG, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", allEPGAction)
-	queryParameters.Add("stream_id", streamID)
+	queryParameters.Add("stream_id", strconv.Itoa(streamID))
 
 	return c.getEPG(ctx, queryParameters)
 }
 
 // GetAuthInfo retrieves authentication information.
 func (c *Client) GetAuthInfo(ctx context.Context) (*AuthInfo, error) {
-	url := c.buildURL(apiPath, nil)
+	reqURL := c.buildURL(apiPath, nil)
 
-	resp, err := c.doRequest(ctx, url)
+	resp, err := c.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +260,7 @@ func (c *Client) GetAuthInfo(ctx context.Context) (*AuthInfo, error) {
 	var authInfo AuthInfo
 	if err := json.NewDecoder(resp.Body).Decode(&authInfo); err != nil {
 		return nil, &DecoderError{
-			URL:                    url,
+			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
@@ -234,16 +271,16 @@ func (c *Client) GetAuthInfo(ctx context.Context) (*AuthInfo, error) {
 // GetPlaylist retrieves a M3U/M3U8 playlist.
 func (c *Client) GetPlaylist(
 	ctx context.Context,
-	playlistType string,
-	outputFormat string,
+	playlistType PlaylistType,
+	outputFormat OutputFormat,
 ) (*m3u.Playlist, error) {
 	queryParameters := url.Values{}
-	queryParameters.Add("type", playlistType)
-	queryParameters.Add("output", outputFormat)
+	queryParameters.Add("type", string(playlistType))
+	queryParameters.Add("output", string(outputFormat))
 
-	url := c.buildURL(playlistPath, queryParameters)
+	reqURL := c.buildURL(playlistPath, queryParameters)
 
-	resp, err := c.doRequest(ctx, url)
+	resp, err := c.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +289,7 @@ func (c *Client) GetPlaylist(
 	var playlist m3u.Playlist
 	if err := m3u.NewDecoder(resp.Body).Decode(&playlist); err != nil {
 		return nil, &DecoderError{
-			URL:                    url,
+			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
@@ -261,10 +298,10 @@ func (c *Client) GetPlaylist(
 }
 
 // GetShortEPG retrieves a short EPG for a specific stream ID.
-func (c *Client) GetShortEPG(ctx context.Context, streamID string) (*EPG, error) {
+func (c *Client) GetShortEPG(ctx context.Context, streamID int) (*EPG, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", shortEPGAction)
-	queryParameters.Add("stream_id", streamID)
+	queryParameters.Add("stream_id", strconv.Itoa(streamID))
 
 	return c.getEPG(ctx, queryParameters)
 }
@@ -272,7 +309,7 @@ func (c *Client) GetShortEPG(ctx context.Context, streamID string) (*EPG, error)
 // GetShortEPGWithLimits retrieves a short EPG for a specific stream ID with a limit on the number of entries.
 func (c *Client) GetShortEPGWithLimits(
 	ctx context.Context,
-	streamID string,
+	streamID int,
 	limit int,
 ) (*EPG, error) {
 	if limit <= 0 {
@@ -281,21 +318,21 @@ func (c *Client) GetShortEPGWithLimits(
 
 	queryParameters := url.Values{}
 	queryParameters.Add("action", shortEPGAction)
-	queryParameters.Add("stream_id", streamID)
+	queryParameters.Add("stream_id", strconv.Itoa(streamID))
 	queryParameters.Add("limit", strconv.Itoa(limit))
 
 	return c.getEPG(ctx, queryParameters)
 }
 
 // GetSeriesInfo retrieves information about a specific series by its ID.
-func (c *Client) GetSeriesInfo(ctx context.Context, seriesID string) (*Series, error) {
+func (c *Client) GetSeriesInfo(ctx context.Context, seriesID int) (*Series, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", seriesInfoAction)
-	queryParameters.Add("series_id", seriesID)
+	queryParameters.Add("series_id", strconv.Itoa(seriesID))
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	resp, err := c.doRequest(ctx, url)
+	resp, err := c.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +341,7 @@ func (c *Client) GetSeriesInfo(ctx context.Context, seriesID string) (*Series, e
 	var seriesInfo Series
 	if err := json.NewDecoder(resp.Body).Decode(&seriesInfo); err != nil {
 		return nil, &DecoderError{
-			URL:                    url,
+			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
@@ -313,14 +350,14 @@ func (c *Client) GetSeriesInfo(ctx context.Context, seriesID string) (*Series, e
 }
 
 // GetVODInfo retrieves information about a specific VOD by its ID.
-func (c *Client) GetVODInfo(ctx context.Context, vodID string) (*VOD, error) {
+func (c *Client) GetVODInfo(ctx context.Context, vodID int) (*VOD, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", vodInfoAction)
-	queryParameters.Add("vod_id", vodID)
+	queryParameters.Add("vod_id", strconv.Itoa(vodID))
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	resp, err := c.doRequest(ctx, url)
+	resp, err := c.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +366,7 @@ func (c *Client) GetVODInfo(ctx context.Context, vodID string) (*VOD, error) {
 	var vodInfo VOD
 	if err := json.NewDecoder(resp.Body).Decode(&vodInfo); err != nil {
 		return nil, &DecoderError{
-			URL:                    url,
+			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
@@ -339,9 +376,9 @@ func (c *Client) GetVODInfo(ctx context.Context, vodID string) (*VOD, error) {
 
 // GetXMLTV retrieves the XMLTV EPG data.
 func (c *Client) GetXMLTV(ctx context.Context) (*xmltv.EPG, error) {
-	url := c.buildURL(epgPath, nil)
+	reqURL := c.buildURL(epgPath, nil)
 
-	resp, err := c.doRequest(ctx, url)
+	resp, err := c.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +386,7 @@ func (c *Client) GetXMLTV(ctx context.Context) (*xmltv.EPG, error) {
 
 	var epg xmltv.EPG
 	if err := xml.NewDecoder(resp.Body).Decode(&epg); err != nil {
-		return nil, fmt.Errorf("failed to decode XMLTV response: %w", err)
+		return nil, fmt.Errorf("failed to decode XMLTV response from %s: %w", redactURL(reqURL), err)
 	}
 
 	return &epg, nil
@@ -360,9 +397,9 @@ func (c *Client) ListLiveCategories(ctx context.Context) ([]LiveCategory, error)
 	queryParameters := url.Values{}
 	queryParameters.Add("action", liveCategoriesAction)
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return c.listCategories(ctx, url)
+	return c.listCategories(ctx, reqURL)
 }
 
 // ListLiveStreams retrieves a list of live streams.
@@ -370,23 +407,23 @@ func (c *Client) ListLiveStreams(ctx context.Context) ([]LiveStream, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", liveStreamsAction)
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return listStreams[LiveStream](ctx, c, url)
+	return listStreams[LiveStream](ctx, c, reqURL)
 }
 
 // ListLiveStreamsInCategory retrieves a list of live streams in a specific category.
 func (c *Client) ListLiveStreamsInCategory(
 	ctx context.Context,
-	categoryID string,
+	categoryID int,
 ) ([]LiveStream, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", liveStreamsAction)
-	queryParameters.Add("category_id", categoryID)
+	queryParameters.Add("category_id", strconv.Itoa(categoryID))
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return listStreams[LiveStream](ctx, c, url)
+	return listStreams[LiveStream](ctx, c, reqURL)
 }
 
 // ListSeriesCategories retrieves a list of series categories.
@@ -394,9 +431,9 @@ func (c *Client) ListSeriesCategories(ctx context.Context) ([]SeriesCategory, er
 	queryParameters := url.Values{}
 	queryParameters.Add("action", seriesCategoriesAction)
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return c.listCategories(ctx, url)
+	return c.listCategories(ctx, reqURL)
 }
 
 // ListSeriesStreams retrieves a list of series streams.
@@ -404,23 +441,23 @@ func (c *Client) ListSeriesStreams(ctx context.Context) ([]SeriesStream, error) 
 	queryParameters := url.Values{}
 	queryParameters.Add("action", seriesStreamsAction)
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return listStreams[SeriesStream](ctx, c, url)
+	return listStreams[SeriesStream](ctx, c, reqURL)
 }
 
 // ListSeriesStreamsInCategory retrieves a list of series streams in a specific category.
 func (c *Client) ListSeriesStreamsInCategory(
 	ctx context.Context,
-	categoryID string,
+	categoryID int,
 ) ([]SeriesStream, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", seriesStreamsAction)
-	queryParameters.Add("category_id", categoryID)
+	queryParameters.Add("category_id", strconv.Itoa(categoryID))
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return listStreams[SeriesStream](ctx, c, url)
+	return listStreams[SeriesStream](ctx, c, reqURL)
 }
 
 // ListVODCategories retrieves a list of VOD categories.
@@ -428,9 +465,9 @@ func (c *Client) ListVODCategories(ctx context.Context) ([]VODCategory, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", vodCategoriesAction)
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return c.listCategories(ctx, url)
+	return c.listCategories(ctx, reqURL)
 }
 
 // ListVODStreams retrieves a list of VOD streams.
@@ -438,21 +475,21 @@ func (c *Client) ListVODStreams(ctx context.Context) ([]VODStream, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", vodStreamsAction)
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return listStreams[VODStream](ctx, c, url)
+	return listStreams[VODStream](ctx, c, reqURL)
 }
 
 // ListVODStreamsInCategory retrieves a list of VOD streams in a specific category.
 func (c *Client) ListVODStreamsInCategory(
 	ctx context.Context,
-	categoryID string,
+	categoryID int,
 ) ([]VODStream, error) {
 	queryParameters := url.Values{}
 	queryParameters.Add("action", vodStreamsAction)
-	queryParameters.Add("category_id", categoryID)
+	queryParameters.Add("category_id", strconv.Itoa(categoryID))
 
-	url := c.buildURL(apiPath, queryParameters)
+	reqURL := c.buildURL(apiPath, queryParameters)
 
-	return listStreams[VODStream](ctx, c, url)
+	return listStreams[VODStream](ctx, c, reqURL)
 }

@@ -59,7 +59,7 @@ if err != nil {
 }
 
 // List live streams in a specific category
-categoryID := "1"  // Category ID as a string
+categoryID := 1  // Category ID
 liveStreamsInCategory, err := client.ListLiveStreamsInCategory(context.Background(), categoryID)
 if err != nil {
     // Handle error
@@ -82,7 +82,7 @@ if err != nil {
 }
 
 // Get detailed information about a specific series
-seriesID := "456"  // Series ID as a string
+seriesID := 456  // Series ID
 seriesInfo, err := client.GetSeriesInfo(context.Background(), seriesID)
 if err != nil {
     // Handle error
@@ -105,7 +105,7 @@ if err != nil {
 }
 
 // Get detailed information about a specific VOD
-vodID := "123"  // VOD ID as a string
+vodID := 123  // VOD ID
 vodInfo, err := client.GetVODInfo(context.Background(), vodID)
 if err != nil {
     // Handle error
@@ -116,7 +116,7 @@ if err != nil {
 
 ```go
 // Get EPG data for a specific stream
-streamID := "789"  // Stream ID as a string
+streamID := 789  // Stream ID
 
 // Get short EPG data
 shortEPG, err := client.GetShortEPG(context.Background(), streamID)
@@ -148,7 +148,11 @@ if err != nil {
 
 ```go
 // Get M3U playlist
-playlist, err := client.GetPlaylist(context.Background(), "m3u_plus", "ts")
+playlist, err := client.GetPlaylist(
+    context.Background(),
+    xtreamcodes.PlaylistTypeM3UPlus,
+    xtreamcodes.OutputFormatTS,
+)
 if err != nil {
     // Handle error
 }

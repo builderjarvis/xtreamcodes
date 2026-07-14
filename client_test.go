@@ -176,7 +176,7 @@ func TestGetAllEPG(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	epg, err := client.GetAllEPG(context.Background(), "100")
+	epg, err := client.GetAllEPG(context.Background(), 100)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -286,7 +286,11 @@ func TestGetPlaylist(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	playlist, err := client.GetPlaylist(context.Background(), "m3u_plus", "ts")
+	playlist, err := client.GetPlaylist(
+		context.Background(),
+		xtreamcodes.PlaylistTypeM3UPlus,
+		xtreamcodes.OutputFormatTS,
+	)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -362,7 +366,7 @@ func TestGetSeriesInfo(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	seriesInfo, err := client.GetSeriesInfo(context.Background(), "1000")
+	seriesInfo, err := client.GetSeriesInfo(context.Background(), 1000)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -465,7 +469,7 @@ func TestGetShortEPG(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	epg, err := client.GetShortEPG(context.Background(), "100")
+	epg, err := client.GetShortEPG(context.Background(), 100)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -579,7 +583,7 @@ func TestGetShortEPGWithLimits(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	epg, err := client.GetShortEPGWithLimits(context.Background(), "100", 3)
+	epg, err := client.GetShortEPGWithLimits(context.Background(), 100, 3)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -657,7 +661,7 @@ func TestGetShortEPGWithLimitsInvalidLimits(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	_, err := client.GetShortEPGWithLimits(context.Background(), "100", 0)
+	_, err := client.GetShortEPGWithLimits(context.Background(), 100, 0)
 	if err == nil {
 		t.Fatal("Expected error for invalid limit, got nil")
 	}
@@ -719,7 +723,7 @@ func TestGetVODInfo(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	vodInfo, err := client.GetVODInfo(context.Background(), "1000")
+	vodInfo, err := client.GetVODInfo(context.Background(), 1000)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -1791,7 +1795,7 @@ func TestListLiveStreamsInCategory(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	liveStreams, err := client.ListLiveStreamsInCategory(context.Background(), "1")
+	liveStreams, err := client.ListLiveStreamsInCategory(context.Background(), 1)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -2077,7 +2081,7 @@ func TestListSeriesStreamsInCategory(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	seriesStreams, err := client.ListSeriesStreamsInCategory(context.Background(), "1")
+	seriesStreams, err := client.ListSeriesStreamsInCategory(context.Background(), 1)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}
@@ -2369,7 +2373,7 @@ func TestListVODStreamsInCategory(t *testing.T) {
 	defer server.Close()
 
 	client := xtreamcodes.NewClient(server.URL, username, password)
-	vodStreams, err := client.ListVODStreamsInCategory(context.Background(), "1")
+	vodStreams, err := client.ListVODStreamsInCategory(context.Background(), 1)
 	if err != nil {
 		t.Fatal("Unexpected error:", err)
 	}

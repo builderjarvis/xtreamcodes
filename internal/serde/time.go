@@ -87,6 +87,11 @@ func (d *DurationAsString) UnmarshalJSON(data []byte) error {
 	}
 
 	durationParts := strings.Split(v, ":")
+	if len(durationParts) != 3 {
+		d.Duration = time.Duration(0)
+
+		return nil
+	}
 
 	parsedDuration, err := time.ParseDuration(
 		fmt.Sprintf("%sh%sm%ss", durationParts[0], durationParts[1], durationParts[2]),
@@ -105,7 +110,7 @@ type UnixTimeAsInteger struct {
 }
 
 func (u *UnixTimeAsInteger) MarshalJSON() ([]byte, error) {
-	if u == nil {
+	if u == nil || u.IsZero() {
 		return json.Marshal(nil)
 	}
 

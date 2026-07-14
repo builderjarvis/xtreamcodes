@@ -9,6 +9,10 @@ import (
 type Float64AsFloat float64
 
 func (f *Float64AsFloat) MarshalJSON() ([]byte, error) {
+	if f == nil {
+		return json.Marshal(nil)
+	}
+
 	return json.Marshal(float64(*f))
 }
 

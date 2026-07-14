@@ -22,9 +22,15 @@ func (i *IntegerAsInteger) UnmarshalJSON(data []byte) error {
 			return err
 		}
 
+		if v == "" {
+			*i = IntegerAsInteger(0)
+
+			return nil
+		}
+
 		parsedValue, err := strconv.Atoi(v)
 		if err != nil {
-			parsedValue = -1
+			return err
 		}
 
 		*i = IntegerAsInteger(parsedValue)
