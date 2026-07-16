@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0] - 2026-07-16
+
+### Added
+
+- Add a `types` package containing the model types and their codec, depending only on `internal/serde`, so consumers that only need serialization (for example, a proxy acting as an Xtream Codes server) can import it without pulling in the HTTP client and its `net/http`, `m3u`, and `xmltv` dependencies ([`9392f4c`](https://github.com/sherif-fanous/xtreamcodes/commit/9392f4c))
+
+### Changed
+
+- Move the model types into the new `types` package; the root package re-exports each as a type alias, so existing usage such as `xtreamcodes.LiveStream` is unaffected ([`9392f4c`](https://github.com/sherif-fanous/xtreamcodes/commit/9392f4c))
+
 ## [0.2.1] - 2026-07-16
 
 ### Fixed
@@ -32,6 +42,7 @@ _This release contains breaking API changes._
 
 _First release._
 
+[0.3.0]: https://github.com/sherif-fanous/xtreamcodes/releases/tag/v0.3.0
 [0.2.1]: https://github.com/sherif-fanous/xtreamcodes/releases/tag/v0.2.1
 [0.2.0]: https://github.com/sherif-fanous/xtreamcodes/releases/tag/v0.2.0
 [0.0.1]: https://github.com/sherif-fanous/xtreamcodes/releases/tag/v0.0.1
