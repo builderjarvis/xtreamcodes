@@ -102,28 +102,41 @@ func WithUserAgent(userAgent string) Option {
 	}
 }
 
-// listStreams is implemented as a standalone generic function rather than a method
-// because Go doesn't support generic methods on receiver types.
-func listStreams[E LiveStream | SeriesStream | VODStream](
-	ctx context.Context,
-	client *Client,
-	reqURL string,
-) ([]E, error) {
+// decodeResponse executes the request and decodes the JSON response body into a
+// value of type T. It is the single place the request/decode/error-wrapping
+// logic lives so the various Get/List methods don't each repeat it.
+func decodeResponse[T any](ctx context.Context, client *Client, reqURL string) (*T, error) {
 	resp, err := client.doRequest(ctx, reqURL)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	var streams []E
-	if err := json.NewDecoder(resp.Body).Decode(&streams); err != nil {
+	var v T
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
 		return nil, &DecoderError{
 			URL:                    redactURL(reqURL),
 			UnderlyingDecoderError: err,
 		}
 	}
 
-	return streams, nil
+	return &v, nil
+}
+
+// listStreams is implemented as a standalone generic function rather than a method
+// because Go doesn't support generic methods on receiver types. It's a thin
+// wrapper over decodeResponse so the List*Streams call sites stay a single line.
+func listStreams[E LiveStream | SeriesStream | VODStream](
+	ctx context.Context,
+	client *Client,
+	reqURL string,
+) ([]E, error) {
+	streams, err := decodeResponse[[]E](ctx, client, reqURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return *streams, nil
 }
 
 // redactURL masks the username and password query parameters in a URL so that
@@ -198,44 +211,19 @@ func (c *Client) doRequest(ctx context.Context, reqURL string) (*http.Response, 
 // It is a helper function used by GetAllEPG, GetShortEPG, and GetShortEPGWithLimits methods
 // to avoid code duplication.
 func (c *Client) getEPG(ctx context.Context, queryParameters url.Values) (*EPG, error) {
-	reqURL := c.buildURL(apiPath, queryParameters)
-
-	resp, err := c.doRequest(ctx, reqURL)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	var epg EPG
-	if err := json.NewDecoder(resp.Body).Decode(&epg); err != nil {
-		return nil, &DecoderError{
-			URL:                    redactURL(reqURL),
-			UnderlyingDecoderError: err,
-		}
-	}
-
-	return &epg, nil
+	return decodeResponse[EPG](ctx, c, c.buildURL(apiPath, queryParameters))
 }
 
 // listCategories retrieves a list of categories from the specified URL.
 // It is a helper function used by ListLiveCategories, ListSeriesCategories, and ListVODCategories
 // methods to avoid code duplication.
 func (c *Client) listCategories(ctx context.Context, reqURL string) ([]Category, error) {
-	resp, err := c.doRequest(ctx, reqURL)
+	categories, err := decodeResponse[[]Category](ctx, c, reqURL)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = resp.Body.Close() }()
 
-	var categories []Category
-	if err := json.NewDecoder(resp.Body).Decode(&categories); err != nil {
-		return nil, &DecoderError{
-			URL:                    redactURL(reqURL),
-			UnderlyingDecoderError: err,
-		}
-	}
-
-	return categories, nil
+	return *categories, nil
 }
 
 // GetAllEPG retrieves all EPG data for a specific stream ID.
@@ -249,23 +237,7 @@ func (c *Client) GetAllEPG(ctx context.Context, streamID int) (*EPG, error) {
 
 // GetAuthInfo retrieves authentication information.
 func (c *Client) GetAuthInfo(ctx context.Context) (*AuthInfo, error) {
-	reqURL := c.buildURL(apiPath, nil)
-
-	resp, err := c.doRequest(ctx, reqURL)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	var authInfo AuthInfo
-	if err := json.NewDecoder(resp.Body).Decode(&authInfo); err != nil {
-		return nil, &DecoderError{
-			URL:                    redactURL(reqURL),
-			UnderlyingDecoderError: err,
-		}
-	}
-
-	return &authInfo, nil
+	return decodeResponse[AuthInfo](ctx, c, c.buildURL(apiPath, nil))
 }
 
 // GetPlaylist retrieves a M3U/M3U8 playlist.
@@ -330,23 +302,7 @@ func (c *Client) GetSeriesInfo(ctx context.Context, seriesID int) (*Series, erro
 	queryParameters.Add("action", seriesInfoAction)
 	queryParameters.Add("series_id", strconv.Itoa(seriesID))
 
-	reqURL := c.buildURL(apiPath, queryParameters)
-
-	resp, err := c.doRequest(ctx, reqURL)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	var seriesInfo Series
-	if err := json.NewDecoder(resp.Body).Decode(&seriesInfo); err != nil {
-		return nil, &DecoderError{
-			URL:                    redactURL(reqURL),
-			UnderlyingDecoderError: err,
-		}
-	}
-
-	return &seriesInfo, nil
+	return decodeResponse[Series](ctx, c, c.buildURL(apiPath, queryParameters))
 }
 
 // GetVODInfo retrieves information about a specific VOD by its ID.
@@ -355,23 +311,7 @@ func (c *Client) GetVODInfo(ctx context.Context, vodID int) (*VOD, error) {
 	queryParameters.Add("action", vodInfoAction)
 	queryParameters.Add("vod_id", strconv.Itoa(vodID))
 
-	reqURL := c.buildURL(apiPath, queryParameters)
-
-	resp, err := c.doRequest(ctx, reqURL)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	var vodInfo VOD
-	if err := json.NewDecoder(resp.Body).Decode(&vodInfo); err != nil {
-		return nil, &DecoderError{
-			URL:                    redactURL(reqURL),
-			UnderlyingDecoderError: err,
-		}
-	}
-
-	return &vodInfo, nil
+	return decodeResponse[VOD](ctx, c, c.buildURL(apiPath, queryParameters))
 }
 
 // GetXMLTV retrieves the XMLTV EPG data.
@@ -386,7 +326,11 @@ func (c *Client) GetXMLTV(ctx context.Context) (*xmltv.EPG, error) {
 
 	var epg xmltv.EPG
 	if err := xml.NewDecoder(resp.Body).Decode(&epg); err != nil {
-		return nil, fmt.Errorf("failed to decode XMLTV response from %s: %w", redactURL(reqURL), err)
+		return nil, fmt.Errorf(
+			"failed to decode XMLTV response from %s: %w",
+			redactURL(reqURL),
+			err,
+		)
 	}
 
 	return &epg, nil
