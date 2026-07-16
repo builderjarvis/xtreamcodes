@@ -1,4 +1,4 @@
-package xtreamcodes
+package types
 
 import (
 	"encoding/json"
