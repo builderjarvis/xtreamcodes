@@ -3,10 +3,9 @@ package xtreamcodes
 import "github.com/sherif-fanous/xtreamcodes/types"
 
 // The canonical model definitions live in the types package so that consumers
-// who only need serialization (for example, a proxy acting as an Xtream Codes
-// server) can import them without pulling in the HTTP client and its
-// dependencies. These aliases keep the models available on the root package
-// for client users.
+// who only need serialization can import them without pulling in the HTTP
+// client and its dependencies. These aliases keep the models available on the
+// root package for client users.
 type (
 	AuthInfo   = types.AuthInfo
 	UserInfo   = types.UserInfo

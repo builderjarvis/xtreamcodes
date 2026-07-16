@@ -11,8 +11,7 @@ import (
 	"github.com/sherif-fanous/xtreamcodes/types"
 )
 
-// roundTrip asserts that a fixture survives the codec without loss, which is the
-// contract a proxy (acting as an Xtream Codes server) relies on:
+// roundTrip asserts that a fixture survives the codec without loss:
 //
 //   - model fidelity: decode -> encode -> decode yields an equal model, so no
 //     field is dropped or corrupted on the way back out.

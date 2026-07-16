@@ -4,7 +4,7 @@
 
 ### Added
 
-- Add a `types` package containing the model types and their codec, depending only on `internal/serde`, so consumers that only need serialization (for example, a proxy acting as an Xtream Codes server) can import it without pulling in the HTTP client and its `net/http`, `m3u`, and `xmltv` dependencies ([`9392f4c`](https://github.com/sherif-fanous/xtreamcodes/commit/9392f4c))
+- Add a `types` package containing the model types and their codec, depending only on `internal/serde`, so consumers that only need serialization can import it without pulling in the HTTP client and its `net/http`, `m3u`, and `xmltv` dependencies ([`9392f4c`](https://github.com/sherif-fanous/xtreamcodes/commit/9392f4c))
 
 ### Changed
 

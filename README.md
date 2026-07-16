@@ -1,6 +1,9 @@
-# Xtream Codes API Client
+# Xtream Codes API
 
-A Go library for interacting with the Xtream Codes API. This client provides a clean, type-safe interface to the Xtream Codes API, handling all the complexity of serialization and deserialization between Go's strongly-typed system and the sometimes inconsistent API responses.
+A Go library for the Xtream Codes API. It gives you a clean, type-safe interface over the API's sometimes inconsistent responses, and you can use it two ways:
+
+- As a client: call the Xtream Codes endpoints and get back strongly-typed Go values.
+- As a codec: import the dependency-light `types` package to marshal and unmarshal Xtream Codes payloads on their own.
 
 ## Installation
 
@@ -156,4 +159,28 @@ playlist, err := client.GetPlaylist(
 if err != nil {
     // Handle error
 }
+```
+
+## Using the models without the client
+
+```go
+import "github.com/sherif-fanous/xtreamcodes/types"
+
+// The types package depends only on internal/serde, so importing it avoids the
+// HTTP client and its net/http, m3u, and xmltv dependencies.
+
+// Decode a response into clean Go types.
+var streams []types.LiveStream
+if err := json.Unmarshal(body, &streams); err != nil {
+    // Handle error
+}
+
+// Encode back into the Xtream Codes wire format.
+out, err := json.Marshal(streams)
+if err != nil {
+    // Handle error
+}
+
+// xtreamcodes.LiveStream and types.LiveStream are the same type, so existing
+// client code keeps working.
 ```
