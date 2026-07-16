@@ -103,13 +103,11 @@ func (s *ServerInfo) fromInternal(internal *serde.ServerInfo) {
 	s.Process = internal.Process
 	s.RTMPPort = int(internal.RTMPPort)
 	s.ServerProtocol = internal.ServerProtocol
+	// Keep TimeNow as the raw parsed instant rather than folding Timezone into
+	// it. That rewrite had no inverse, so decode->encode could shift the emitted
+	// timestamp. Timezone is exposed as its own field for callers that want to
+	// apply a location.
 	s.TimeNow = time.Time(internal.TimeNow.Time)
-	if location, err := time.LoadLocation(internal.Timezone); err == nil {
-		s.TimeNow = time.Date(internal.TimeNow.Year(), internal.TimeNow.Month(),
-			internal.TimeNow.Day(), internal.TimeNow.Hour(),
-			internal.TimeNow.Minute(), internal.TimeNow.Second(),
-			internal.TimeNow.Nanosecond(), location)
-	}
 	s.TimestampNow = time.Time(internal.TimestampNow.Time)
 	s.Timezone = internal.Timezone
 	s.URL = internal.URL

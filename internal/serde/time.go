@@ -56,9 +56,14 @@ func (d *DateTimeAsString) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	// Panels send sentinels like "0000-00-00 00:00:00" that don't parse. Treat
+	// those as a zero time (consistent with DateAsString) instead of failing the
+	// entire response decode.
 	t, err := time.Parse(time.DateTime, v)
 	if err != nil {
-		return err
+		d.Time = time.Time{}
+
+		return nil
 	}
 
 	d.Time = t
