@@ -242,7 +242,7 @@ func (s *SeriesInfo) fromInternal(internal *serde.SeriesInfo) {
 // toInternal converts SeriesInfo to its internal representation
 func (s *SeriesInfo) toInternal() *serde.SeriesInfo {
 	return &serde.SeriesInfo{
-		BackdropPath:   (serde.SliceStringSliceString)(s.BackdropPath),
+		BackdropPath:   serde.SliceStringSliceString(s.BackdropPath),
 		Cast:           s.Cast,
 		CategoryID:     (*serde.IntegerAsInteger)(s.CategoryID),
 		CategoryIDs:    s.CategoryIDs,

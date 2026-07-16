@@ -165,7 +165,7 @@ func (v *VODInfo) fromInternal(internal *serde.VODInfo) {
 	v.CoverBig = internal.CoverBig
 	v.Description = internal.Description
 	v.Director = internal.Director
-	v.Duration = (time.Duration)(internal.Duration.Duration)
+	v.Duration = time.Duration(internal.Duration.Duration)
 	v.DurationSeconds = int(internal.DurationSeconds)
 	v.Genre = internal.Genre
 	v.MovieImage = internal.MovieImage
