@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-07-16
+
+### Fixed
+
+- Decode zero-date datetimes such as `"0000-00-00 00:00:00"` as a zero time instead of failing the entire response ([`f27767f`](https://github.com/sherif-fanous/xtreamcodes/commit/f27767f))
+- Stop folding the server timezone into `ServerInfo.TimeNow` on decode, which could shift the timestamp on re-encode; `Timezone` remains available as its own field ([`f27767f`](https://github.com/sherif-fanous/xtreamcodes/commit/f27767f))
+
 ## [0.2.0] - 2026-07-14
 
 _This release contains breaking API changes._
@@ -25,5 +32,6 @@ _This release contains breaking API changes._
 
 _First release._
 
+[0.2.1]: https://github.com/sherif-fanous/xtreamcodes/releases/tag/v0.2.1
 [0.2.0]: https://github.com/sherif-fanous/xtreamcodes/releases/tag/v0.2.0
 [0.0.1]: https://github.com/sherif-fanous/xtreamcodes/releases/tag/v0.0.1
