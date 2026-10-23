@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sherif-fanous/m3u"
@@ -19,6 +20,7 @@ import (
 const (
 	defaultHTTPClientTimeout = 30 * time.Second
 	defaultUserAgent         = "go-xtreamcodes"
+	defaultMaxResponseBytes  = 64 << 20
 
 	apiPath      = "/player_api.php"
 	epgPath      = "/xmltv.php"
@@ -55,11 +57,12 @@ const (
 
 // Client represents a client for the Xtream Codes API.
 type Client struct {
-	host       string
-	username   string
-	password   string
-	httpClient *http.Client
-	userAgent  string
+	host             string
+	username         string
+	password         string
+	httpClient       *http.Client
+	userAgent        string
+	maxResponseBytes int64
 }
 
 // Option represents a function that configures the Client using the functional options pattern.
@@ -78,11 +81,14 @@ func NewClient(host string, username string, password string, options ...Option)
 		httpClient: &http.Client{
 			Timeout: defaultHTTPClientTimeout,
 		},
-		userAgent: defaultUserAgent,
+		userAgent:        defaultUserAgent,
+		maxResponseBytes: defaultMaxResponseBytes,
 	}
 
 	for _, option := range options {
-		option(client)
+		if option != nil {
+			option(client)
+		}
 	}
 
 	return client
@@ -91,7 +97,19 @@ func NewClient(host string, username string, password string, options ...Option)
 // WithHTTPClient sets the HTTP client for the client.
 func WithHTTPClient(client *http.Client) Option {
 	return func(c *Client) {
-		c.httpClient = client
+		if client != nil {
+			c.httpClient = client
+		}
+	}
+}
+
+// WithMaxResponseBytes sets the maximum decoded response size in bytes.
+// Nonpositive values retain the default limit of 64 MiB.
+func WithMaxResponseBytes(limit int64) Option {
+	return func(c *Client) {
+		if limit > 0 {
+			c.maxResponseBytes = limit
+		}
 	}
 }
 
@@ -113,11 +131,20 @@ func decodeResponse[T any](ctx context.Context, client *Client, reqURL string) (
 	defer func() { _ = resp.Body.Close() }()
 
 	var v T
-	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(&v); err != nil {
 		return nil, &DecoderError{
 			URL:                    redactURL(reqURL),
-			UnderlyingDecoderError: err,
+			UnderlyingDecoderError: safeCause(err),
 		}
+	}
+	// Reject trailing values and read to EOF so a response cannot evade the size limit.
+	var trailing json.RawMessage
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			err = errors.New("multiple JSON values")
+		}
+		return nil, &DecoderError{URL: redactURL(reqURL), UnderlyingDecoderError: safeCause(err)}
 	}
 
 	return &v, nil
@@ -144,8 +171,10 @@ func listStreams[E LiveStream | SeriesStream | VODStream](
 func redactURL(rawURL string) string {
 	parsed, err := url.Parse(rawURL)
 	if err != nil {
-		return rawURL
+		return "[invalid URL]"
 	}
+	parsed.User = nil
+	parsed.Fragment = ""
 
 	query := parsed.Query()
 	if query.Has("username") {
@@ -161,48 +190,80 @@ func redactURL(rawURL string) string {
 
 // buildURL constructs the full URL for the API request, including the host, path, and query parameters.
 func (c *Client) buildURL(path string, queryParameters url.Values) string {
+	base, err := url.Parse(c.host)
+	if err != nil || base.Hostname() == "" || (base.Scheme != "http" && base.Scheme != "https") || base.User != nil || base.RawQuery != "" || base.ForceQuery || base.Fragment != "" || base.Opaque != "" {
+		return ""
+	}
+	base.Path = strings.TrimRight(base.Path, "/") + path
+	base.RawPath = ""
 	credentialsQueryParameters := url.Values{}
 	credentialsQueryParameters.Add("username", c.username)
 	credentialsQueryParameters.Add("password", c.password)
 
-	reqURL := fmt.Sprintf("%s%s?%s", c.host, path, credentialsQueryParameters.Encode())
-	if queryParameters != nil {
-		reqURL = fmt.Sprintf("%s&%s", reqURL, queryParameters.Encode())
+	for key, values := range queryParameters {
+		if key != "username" && key != "password" {
+			credentialsQueryParameters[key] = values
+		}
 	}
+	base.RawQuery = credentialsQueryParameters.Encode()
 
-	return reqURL
+	return base.String()
 }
 
 // doRequest executes an HTTP GET request to the specified URL and returns the response.
 func (c *Client) doRequest(ctx context.Context, reqURL string) (*http.Response, error) {
+	if reqURL == "" {
+		return nil, errors.New("invalid host: require an HTTP(S) URL without userinfo, query or fragment")
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", safeCause(err))
 	}
 
 	req.Header.Set("User-Agent", c.userAgent)
 
-	resp, err := c.httpClient.Do(req)
+	// Copy the client to avoid changing the caller's redirect policy or racing
+	// concurrent requests. Never send credential-bearing redirects to another origin.
+	httpClient := *c.httpClient
+	checkRedirect := httpClient.CheckRedirect
+	httpClient.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return errors.New("too many redirects")
+		}
+		if next.URL.Scheme != req.URL.Scheme || !strings.EqualFold(next.URL.Host, req.URL.Host) || next.URL.User != nil {
+			return errors.New("cross-origin redirect blocked")
+		}
+		// The automatic Referer can contain credentials from the previous URL.
+		next.Header.Del("Referer")
+		if checkRedirect != nil {
+			if err := checkRedirect(next, via); err != nil {
+				return err
+			}
+			if next.URL.Scheme != req.URL.Scheme || !strings.EqualFold(next.URL.Host, req.URL.Host) || next.URL.User != nil {
+				return errors.New("cross-origin redirect blocked")
+			}
+			next.Header.Del("Referer")
+		}
+		return nil
+	}
+	resp, err := httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute request: %w", err)
+		return nil, fmt.Errorf("failed to execute request: %w", safeCause(err))
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
-
-		var body *string
-		if err == nil && len(bodyBytes) > 0 {
-			bodyStr := string(bodyBytes)
-			body = &bodyStr
-		}
 
 		return nil, &HTTPError{
 			URL:        redactURL(reqURL),
 			StatusCode: resp.StatusCode,
-			Body:       body,
 		}
 	}
+	if resp.ContentLength > c.maxResponseBytes {
+		_ = resp.Body.Close()
+		return nil, ErrResponseTooLarge
+	}
+	resp.Body = &boundedBody{ReadCloser: resp.Body, remaining: c.maxResponseBytes, ctx: ctx}
 
 	return resp, nil
 }
@@ -262,8 +323,11 @@ func (c *Client) GetPlaylist(
 	if err := m3u.NewDecoder(resp.Body).Decode(&playlist); err != nil {
 		return nil, &DecoderError{
 			URL:                    redactURL(reqURL),
-			UnderlyingDecoderError: err,
+			UnderlyingDecoderError: safeCause(err),
 		}
+	}
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return nil, safeCause(err)
 	}
 
 	return &playlist, nil
@@ -326,11 +390,10 @@ func (c *Client) GetXMLTV(ctx context.Context) (*xmltv.EPG, error) {
 
 	var epg xmltv.EPG
 	if err := xml.NewDecoder(resp.Body).Decode(&epg); err != nil {
-		return nil, fmt.Errorf(
-			"failed to decode XMLTV response from %s: %w",
-			redactURL(reqURL),
-			err,
-		)
+		return nil, &DecoderError{URL: redactURL(reqURL), UnderlyingDecoderError: safeCause(err)}
+	}
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return nil, safeCause(err)
 	}
 
 	return &epg, nil

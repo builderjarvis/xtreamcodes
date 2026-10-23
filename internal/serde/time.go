@@ -123,6 +123,10 @@ func (u *UnixTimeAsInteger) MarshalJSON() ([]byte, error) {
 }
 
 func (u *UnixTimeAsInteger) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" || string(data) == `""` {
+		u.Time = time.Time{}
+		return nil
+	}
 	if len(data) > 0 && data[0] == '"' {
 		var v string
 		if err := json.Unmarshal(data, &v); err != nil {
