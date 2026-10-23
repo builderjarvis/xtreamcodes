@@ -3,6 +3,7 @@ package serde
 import (
 	"encoding/base64"
 	"encoding/json"
+	"unicode/utf8"
 )
 
 type SliceStringSliceString []string
@@ -61,7 +62,13 @@ func (s *StringAsBase64EncodedString) UnmarshalJSON(data []byte) error {
 
 	decoded, err := base64.StdEncoding.DecodeString(v)
 	if err != nil {
-		return err
+		decoded, err = base64.RawStdEncoding.DecodeString(v)
+	}
+	if err != nil || !utf8.Valid(decoded) {
+		// Some panels return plain text instead of base64. Preserve it rather
+		// than discarding the whole programme guide over one title.
+		*s = StringAsBase64EncodedString(v)
+		return nil
 	}
 
 	*s = StringAsBase64EncodedString(decoded)
